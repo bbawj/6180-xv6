@@ -54,7 +54,12 @@ uint64 sys_sleep(void) {
 
 #ifdef LAB_PGTBL
 int sys_pgaccess(void) {
-  // lab pgtbl: your code here.
+  uint64 starting_page, bitmask_addr;
+  int npages;
+  argaddr(0, &starting_page);
+  argint(1, &npages);
+  argaddr(2, &bitmask_addr);
+  pgaccess(myproc()->pagetable, starting_page, npages, bitmask_addr);
   return 0;
 }
 #endif
