@@ -39,8 +39,7 @@ void find(char *path, char *pattern) {
   char *p = buf + strlen(buf);
   *p++ = '/';
   while (read(fd, &de, sizeof(de)) == sizeof(de)) {
-    if (de.inum == 0)
-      continue;
+    if (de.inum == 0) continue;
     memmove(p, de.name, DIRSIZ);
     p[DIRSIZ] = 0;
     if (stat(buf, &st) < 0) {
@@ -52,8 +51,7 @@ void find(char *path, char *pattern) {
       strcpy(nested, buf);
       find(nested, pattern);
     } else {
-      if (strcmp(p, pattern) == 0)
-        printf("%s\n", buf);
+      if (strcmp(p, pattern) == 0) printf("%s\n", buf);
     }
   }
   close(fd);

@@ -39,8 +39,7 @@ int main(int argc, char *argv[]) {
     close(in[1]);
     read(in[0], &buf, sizeof(int));
     printf("prime %d\n", buf);
-    if (prime == -1)
-      prime = buf;
+    if (prime == -1) prime = buf;
 
     for (;;) {
       int ret = read_all(&buf, in[0]);
