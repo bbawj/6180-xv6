@@ -86,6 +86,8 @@ extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
 extern uint64 sys_trace(void);
 extern uint64 sys_sysinfo(void);
+extern uint64 sys_sigalarm(void);
+extern uint64 sys_sigreturn(void);
 
 #ifdef LAB_NET
 extern uint64 sys_connect(void);
@@ -97,17 +99,18 @@ extern uint64 sys_pgaccess(void);
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
 static uint64 (*syscalls[])(void) = {
-    [SYS_fork] sys_fork,         [SYS_exit] sys_exit,
-    [SYS_wait] sys_wait,         [SYS_pipe] sys_pipe,
-    [SYS_read] sys_read,         [SYS_kill] sys_kill,
-    [SYS_exec] sys_exec,         [SYS_fstat] sys_fstat,
-    [SYS_chdir] sys_chdir,       [SYS_dup] sys_dup,
-    [SYS_getpid] sys_getpid,     [SYS_sbrk] sys_sbrk,
-    [SYS_sleep] sys_sleep,       [SYS_uptime] sys_uptime,
-    [SYS_open] sys_open,         [SYS_write] sys_write,
-    [SYS_mknod] sys_mknod,       [SYS_unlink] sys_unlink,
-    [SYS_link] sys_link,         [SYS_mkdir] sys_mkdir,
-    [SYS_close] sys_close,
+    [SYS_fork] sys_fork,           [SYS_exit] sys_exit,
+    [SYS_wait] sys_wait,           [SYS_pipe] sys_pipe,
+    [SYS_read] sys_read,           [SYS_kill] sys_kill,
+    [SYS_exec] sys_exec,           [SYS_fstat] sys_fstat,
+    [SYS_chdir] sys_chdir,         [SYS_dup] sys_dup,
+    [SYS_getpid] sys_getpid,       [SYS_sbrk] sys_sbrk,
+    [SYS_sleep] sys_sleep,         [SYS_uptime] sys_uptime,
+    [SYS_open] sys_open,           [SYS_write] sys_write,
+    [SYS_mknod] sys_mknod,         [SYS_unlink] sys_unlink,
+    [SYS_link] sys_link,           [SYS_mkdir] sys_mkdir,
+    [SYS_close] sys_close,         [SYS_sigalarm] sys_sigalarm,
+    [SYS_sigreturn] sys_sigreturn, [SYS_trace] sys_trace,
 #ifdef LAB_NET
     [SYS_connect] sys_connect,
 #endif
@@ -162,6 +165,10 @@ static const char *syscall_name(int num) {
       return "close";
     case SYS_trace:
       return "trace";
+    case SYS_sigalarm:
+      return "sigalarm";
+    case SYS_sigreturn:
+      return "sigreturn";
     default:
       return "";
   }

@@ -36,6 +36,7 @@ uint64 sys_sbrk(void) {
 uint64 sys_sleep(void) {
   int n;
   uint ticks0;
+  backtrace();
 
   argint(0, &n);
   if (n < 0) n = 0;
@@ -92,3 +93,13 @@ uint64 sys_sysinfo(void) {
   argaddr(0, &p);
   return info(p);
 }
+
+uint64 sys_sigalarm(void) {
+  int ticks;
+  argint(0, &ticks);
+  uint64 fp;
+  argaddr(1, &fp);
+  return sigalarm(ticks, fp);
+}
+
+uint64 sys_sigreturn(void) { return sigreturn(); }

@@ -115,3 +115,18 @@ void printfinit(void) {
   initlock(&pr.lock, "pr");
   pr.locking = 1;
 }
+
+void backtrace(void) {
+  printf("backtrace:\n");
+
+  uint64 stack_frame;
+  asm("mv %0, s0" : "=r"(stack_frame));
+  uint64 page_addr = PGROUNDDOWN(stack_frame);
+  /* This uses the assumption that the process stack is only 1 page in size.
+   * Hence we can stop when the stack frame exceeds bounds */
+  while (stack_frame >= page_addr && stack_frame < page_addr + PGSIZE) {
+    uint64 ret_addr = *(uint64 *)(stack_frame - 8);
+    printf("%p\n", ret_addr);
+    stack_frame = *(uint64 *)stack_frame;
+  }
+}

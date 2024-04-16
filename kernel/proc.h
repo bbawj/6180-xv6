@@ -106,4 +106,9 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
   int trace_bitmask;  // Bitmask used to identify which syscall to trace
+  int alarm_interval;
+  int alarm_returned;
+  uint alarm_called_at;
+  uint64 alarm_handler;
+  struct trapframe saved_trapframe;
 };

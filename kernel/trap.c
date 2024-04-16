@@ -56,6 +56,7 @@ void usertrap(void) {
   } else if ((which_dev = devintr()) != 0) {
     // ok
   } else {
+    backtrace();
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     setkilled(p);
@@ -64,7 +65,16 @@ void usertrap(void) {
   if (killed(p)) exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if (which_dev == 2) yield();
+  if (which_dev == 2) {
+    if (p->alarm_interval > 0 && p->alarm_returned == 1 &&
+        ticks - p->alarm_called_at >= (uint)p->alarm_interval) {
+      p->alarm_returned = 0;
+      p->alarm_called_at = ticks;
+      p->saved_trapframe = *p->trapframe;
+      p->trapframe->epc = p->alarm_handler;
+    }
+    yield();
+  }
 
   usertrapret();
 }
@@ -191,4 +201,23 @@ int devintr() {
   } else {
     return 0;
   }
+}
+
+uint64 sigalarm(int interval, uint64 handler_addr) {
+  struct proc *p = myproc();
+  if (p) {
+    p->alarm_interval = interval;
+    p->alarm_handler = handler_addr;
+    p->alarm_called_at = 0;
+  }
+  return 0;
+}
+
+uint64 sigreturn(void) {
+  struct proc *p = myproc();
+  if (p) {
+    p->alarm_returned = 1;
+    *p->trapframe = p->saved_trapframe;
+  }
+  return p->trapframe->a0;
 }

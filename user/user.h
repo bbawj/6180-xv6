@@ -33,6 +33,8 @@ int ugetpid(void);
 #endif
 int trace(int);
 int sysinfo(struct sysinfo *);
+int sigalarm(int, void(*handler));
+int sigreturn(void);
 
 // ulib.c
 int stat(const char *, struct stat *);
