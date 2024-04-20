@@ -259,25 +259,24 @@ int uvmcopy(pagetable_t old, pagetable_t new, uint64 sz) {
   pte_t *pte;
   uint64 pa, i;
   uint flags;
-  char *mem;
 
   for (i = 0; i < sz; i += PGSIZE) {
     if ((pte = walk(old, i, 0)) == 0) panic("uvmcopy: pte should exist");
     if ((*pte & PTE_V) == 0) panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
-    if ((mem = kalloc()) == 0) goto err;
-    memmove(mem, (char *)pa, PGSIZE);
-    if (mappages(new, i, PGSIZE, (uint64)mem, flags) != 0) {
-      kfree(mem);
-      goto err;
+    // Clear the write flag for the parent so that modifications trigger a
+    // pagefault w can later handle
+    if (flags & PTE_W) {
+      *pte &= ~PTE_W;
+      *pte |= PTE_P;
     }
+    if (mappages(new, i, PGSIZE, pa, PTE_FLAGS(*pte)) != 0) {
+      return -1;
+    }
+    inc_ref(pa);
   }
   return 0;
-
-err:
-  uvmunmap(new, 0, i / PGSIZE, 1);
-  return -1;
 }
 
 // mark a PTE invalid for user access.
@@ -300,9 +299,43 @@ int copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len) {
     va0 = PGROUNDDOWN(dstva);
     pa0 = walkaddr(pagetable, va0);
     if (pa0 == 0) return -1;
-    n = PGSIZE - (dstva - va0);
+    pte_t *pte = walk(pagetable, va0, 0);
+    if (pte == 0) return -1;
+    uint flags = PTE_FLAGS(*pte);
+    if (flags & PTE_P) {
+      // This page is shared with other processes for COW
+      // Allocate a new physical page so copyout does not overwrite the memory
+      // for all share
+      if (get_ref(pa0) > 1) {
+        // allocate new block
+        char *mem;
+        if ((mem = kalloc()) == 0) {
+          return -1;
+        }
+        // NOTE: the src and dest may overlap, need to ensure mem has full copy
+        // before freeing
+        memmove(mem, (char *)pa0, PGSIZE);
+        // unmap the page for the process
+        uvmunmap(pagetable, va0, 1, 1);
+        // map new page
+        flags &= ~PTE_P;
+        flags |= PTE_W;
+        if (mappages(pagetable, va0, PGSIZE, (uint64)mem, flags) == -1) {
+          kfree(mem);
+          return -1;
+        }
+        pa0 = (uint64)mem;
+      } else {
+        *pte &= ~PTE_P;
+        *pte |= PTE_W;
+      }
+    }
+
+    uint64 offset = dstva - va0;
+    n = PGSIZE - offset;
     if (n > len) n = len;
-    memmove((void *)(pa0 + (dstva - va0)), src, n);
+
+    memmove((void *)(pa0 + offset), src, n);
 
     len -= n;
     src += n;

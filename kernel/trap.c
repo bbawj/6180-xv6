@@ -21,6 +21,55 @@ void trapinit(void) { initlock(&tickslock, "time"); }
 // set up to take exceptions and traps while in the kernel.
 void trapinithart(void) { w_stvec((uint64)kernelvec); }
 
+void naughty_process(struct proc *p, const char *msg) {
+  printf("usertrap(): %s %p pid=%d\n", msg, r_scause(), p->pid);
+  printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
+  setkilled(p);
+}
+
+void handle_cow(struct proc *p) {
+  // Store page fault
+  uint64 faulted_addr = r_stval();
+  faulted_addr = PGROUNDDOWN(faulted_addr);
+
+  // Check if accessing unmapped page
+  uint64 pa = walkaddr(p->pagetable, faulted_addr);
+  if (pa == 0) return naughty_process(p, "unexpected scause");
+
+  pte_t *pte = walk(p->pagetable, faulted_addr, 0);
+  if (pte == 0) panic("usertrap(): no pte");
+  if ((*pte & PTE_V) == 0) panic("uvmcopy: page not present");
+
+  uint flags = PTE_FLAGS(*pte);
+  // Process tried to modified non-writable page, valid page fault
+  if ((flags & PTE_P) == 0) {
+    return naughty_process(p, "COW tried to modify non-writable page");
+  } else {
+    uint64 pa = PTE2PA(*pte);
+    // Only create a copy if there is more than 1 process referring to the
+    // page
+    if (get_ref(pa) > 1) {
+      char *mem;
+      if ((mem = kalloc()) == 0) {
+        return naughty_process(p, "COW ran out of memory");
+      }
+      memmove(mem, (char *)pa, PGSIZE);
+
+      flags &= ~PTE_P;
+      flags |= PTE_W;
+      uvmunmap(p->pagetable, faulted_addr, 1, 1);
+      if (mappages(p->pagetable, faulted_addr, PGSIZE, (uint64)mem, flags) ==
+          -1) {
+        kfree(mem);
+        return naughty_process(p, "Could not map page for forked process");
+      }
+    } else {
+      *pte &= ~PTE_P;
+      *pte |= PTE_W;
+    }
+  }
+}
+
 //
 // handle an interrupt, exception, or system call from user space.
 // called from trampoline.S
@@ -39,7 +88,9 @@ void usertrap(void) {
   // save user program counter.
   p->trapframe->epc = r_sepc();
 
-  if (r_scause() == 8) {
+  uint64 scause = r_scause();
+
+  if (scause == 8) {
     // system call
 
     if (killed(p)) exit(-1);
@@ -53,13 +104,13 @@ void usertrap(void) {
     intr_on();
 
     syscall();
+  } else if (scause == 15) {
+    handle_cow(p);
   } else if ((which_dev = devintr()) != 0) {
     // ok
   } else {
-    backtrace();
-    printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
-    printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
-    setkilled(p);
+    // backtrace();
+    naughty_process(p, "unexpected scause");
   }
 
   if (killed(p)) exit(-1);

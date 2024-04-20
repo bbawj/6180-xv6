@@ -65,6 +65,8 @@ void *kalloc(void);
 void kfree(void *);
 void kinit(void);
 uint64 freemem(void);
+int get_ref(uint64);
+void inc_ref(uint64);
 
 // log.c
 void initlog(int, struct superblock *);
