@@ -109,7 +109,7 @@ void usertrap(void) {
   } else if ((which_dev = devintr()) != 0) {
     // ok
   } else {
-    // backtrace();
+    backtrace();
     naughty_process(p, "unexpected scause");
   }
 
