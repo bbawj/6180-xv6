@@ -7,7 +7,6 @@
 #include "defs.h"
 #include "spinlock.h"
 #include "proc.h"
-#include "fs.h"
 
 /*
  * the kernel's page table.
@@ -137,7 +136,7 @@ int mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa,
 
   if (size == 0) panic("mappages: size");
 
-  a = PGROUNDDOWN(va);
+  a    = PGROUNDDOWN(va);
   last = PGROUNDDOWN(va + size - 1);
   for (;;) {
     if ((pte = walk(pagetable, a, 1)) == 0) return -1;
@@ -200,7 +199,7 @@ void uvmfirst(pagetable_t pagetable, uchar *src, uint sz) {
 // Allocate PTEs and physical memory to grow process from oldsz to
 // newsz, which need not be page aligned.  Returns new size or 0 on error.
 uint64 uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm) {
-  char *mem;
+  char  *mem;
   uint64 a;
 
   if (newsz < oldsz) return oldsz;
@@ -272,12 +271,12 @@ void uvmfree(pagetable_t pagetable, uint64 sz) {
 int uvmcopy(pagetable_t old, pagetable_t new, uint64 sz) {
   pte_t *pte;
   uint64 pa, i;
-  uint flags;
+  uint   flags;
 
   for (i = 0; i < sz; i += PGSIZE) {
     if ((pte = walk(old, i, 0)) == 0) panic("uvmcopy: pte should exist");
     if ((*pte & PTE_V) == 0) panic("uvmcopy: page not present");
-    pa = PTE2PA(*pte);
+    pa    = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
     // Clear the write flag for the parent so that modifications trigger a
     // pagefault w can later handle
@@ -346,7 +345,7 @@ int copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len) {
     }
 
     uint64 offset = dstva - va0;
-    n = PGSIZE - offset;
+    n             = PGSIZE - offset;
     if (n > len) n = len;
 
     memmove((void *)(pa0 + offset), src, n);
@@ -385,7 +384,7 @@ int copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len) {
 // Return 0 on success, -1 on error.
 int copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max) {
   uint64 n, va0, pa0;
-  int got_null = 0;
+  int    got_null = 0;
 
   while (got_null == 0 && max > 0) {
     va0 = PGROUNDDOWN(srcva);
@@ -397,7 +396,7 @@ int copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max) {
     char *p = (char *)(pa0 + (srcva - va0));
     while (n > 0) {
       if (*p == '\0') {
-        *dst = '\0';
+        *dst     = '\0';
         got_null = 1;
         break;
       } else {
