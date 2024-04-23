@@ -1,0 +1,14 @@
+SortIncludes: false
+
+BasedOnStyle: Google
+
+AlignConsecutiveAssignments: 
+    Enabled: true
+
+AlignConsecutiveDeclarations:
+    Enabled: true
+
+AlignConsecutiveMacros:
+    Enabled: true
+    AcrossComments: true
+    AcrossEmptyLines: false
